@@ -1,5 +1,2 @@
-const data = require('./api');
-
-(async () => {
-    console.log(await data.Notifications(true));
-})()
+const Trakteer = require('./api');
+module.exports = Trakteer;
