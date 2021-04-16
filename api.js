@@ -8,6 +8,24 @@ class Trakteer {
         this.config = require('./config.json');
     }
 
+    getSaldo() {
+        return new Promise(async (resolve, reject) => {
+            try {
+
+                const endpoint = 'manage/balance';
+                const res = await tools.get(endpoint);
+                const saldo = res.data;
+
+
+                const scrapSaldo = $(saldo).find('.available-balance h3').text();
+                return resolve(scrapSaldo);
+
+            } catch (e) {
+                return reject(e);
+            }
+        })
+    }
+
     getData() {
         return new Promise(async (resolve, reject) => {
             try {
@@ -39,11 +57,11 @@ class Trakteer {
                     list.push(donatur);
                 })
 
-                resolve(list);
+                return resolve(list);
 
             } catch (e) {
 
-                reject(e);
+                return reject(e);
 
             }
 
@@ -59,11 +77,11 @@ class Trakteer {
                 const res = await tools.get('manage/tip-received');
                 const response = $(res.data).find('span.text-primary').text();
 
-                resolve(response);
+                return resolve(response);
 
             } catch (e) {
 
-                reject(e);
+                return reject(e);
 
             }
 
@@ -85,7 +103,7 @@ class Trakteer {
         const donaturData = await this.method.getData();
         const dbDonet = db.get('data');
         if (!db) db.set('data', donaturData);
-        if (donaturData.length == dbDonet.length) {
+        if (donaturData.length > dbDonet.length) {
 
             const msg = donaturData[0].support_message;
             msg.pop();
