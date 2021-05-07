@@ -137,7 +137,7 @@ class Trakteer {
             const donatur = db.get('data');
             if (!donatur) db.set('data', donaturData);
 
-            if (donaturData[0].createdAt != donatur[0].createdAt) return;
+            if (donaturData[0].createdAt == donatur[0].createdAt) return;
 
             const json = {
                 'content': '<a:bell:840021626473152513> tengtong ada donatur masuk! <a:bell:840021626473152513>',
