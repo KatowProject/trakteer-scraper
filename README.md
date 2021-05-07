@@ -30,5 +30,5 @@ const Trakteer = new client({
 
 })();
 ```
-
-<center>Selamat Mencoba! <br> <img src="https://cdn.discordapp.com/attachments/795771950076133438/840061306048741406/1531054099_tumblr_omwwfgESJW1tw58h4o1_500.gif"></center>
+<p align="center"> Selamat Mencoba!</p>
+<p align="center"><img src="https://cdn.discordapp.com/attachments/795771950076133438/840061306048741406/1531054099_tumblr_omwwfgESJW1tw58h4o1_500.gif" /></p>
