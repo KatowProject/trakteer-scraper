@@ -1,8 +1,18 @@
-const TrakteerScrap = require('./index');
+const client = require('./index');
 
-const trakteer = new TrakteerScrap();
+const Trakteer = new client({
+    'XSRF-TOKEN': 'XSRF-TOKEN',
+    'trakteer-id-session': 'trakteer-id-session',
+    'webhook': 'webhook'
+});
 
-const test = async () => {
-    console.log(await trakteer.getSaldo());
-}
-test()
+
+(async () => {
+
+    console.log(await Trakteer.getData());
+    console.log(await Trakteer.getSupporter());
+    console.log(await Trakteer.getSaldo());
+    console.log(await Trakteer.getTipReceived());
+    console.log(await Trakteer.getNotification(true, 60000));
+
+})()

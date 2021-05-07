@@ -1,14 +1,13 @@
 const baseURL = 'https://trakteer.id/';
-const { cookie } = require('./config.json');
 const axios = require('axios');
 
-function get(endpoint) {
+function get(endpoint, options) {
     return new Promise(async (resolve, reject) => {
         try {
 
             const res = await axios.get(baseURL + endpoint, {
                 headers: {
-                    cookie
+                    cookie: `XSRF-TOKEN=${options['XSRF-TOKEN']}; trakteer-id-session=${options['trakteer-id-session']}`
                 }
             })
 
@@ -21,12 +20,14 @@ function get(endpoint) {
     });
 }
 
-function post(webhook, data, headers) {
+function post(json, url) {
     return new Promise(async (resolve, reject) => {
         try {
 
-            const res = await axios.post(webhook, data, {
-                headers
+            const res = await axios.post(url, json, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             })
 
             if (res.status === 200) return resolve(res);

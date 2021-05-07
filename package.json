@@ -1,6 +1,6 @@
 {
-  "name": "trakteer-discord",
-  "version": "1.0.0",
+  "name": "trakteer-scraper",
+  "version": "1.0.1",
   "description": "trakteer-api",
   "main": "index.js",
   "scripts": {
@@ -13,5 +13,16 @@
     "cheerio": "^1.0.0-rc.6",
     "quick.db": "^7.1.3"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KatowProject/trakteer-scraper.git"
+  },
+  "keywords": [
+    "trakteer"
+  ],
+  "bugs": {
+    "url": "https://github.com/KatowProject/trakteer-scraper/issues"
+  },
+  "homepage": "https://github.com/KatowProject/trakteer-scraper#readme"
 }
