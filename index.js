@@ -2,7 +2,7 @@ const db = require('quick.db');
 const fs = require('fs');
 const cheerio = require('cheerio');
 const tools = require('./tools');
-const { end } = require('cheerio/lib/api/traversing');
+
 class Trakteer {
 
     constructor(options = {}) {
@@ -32,7 +32,7 @@ class Trakteer {
         return new Promise(async (resolve, reject) => {
             try {
 
-                const point = fs.readFileSync('endpoint/getData.txt', 'utf8');
+                const point = fs.readFileSync('./endpoint/getData.txt', 'utf8');
                 const res = await tools.get(point, this.options);
                 const donet = res.data.data;
 
@@ -74,7 +74,7 @@ class Trakteer {
         return new Promise(async (resolve, reject) => {
             try {
 
-                const endpoint = fs.readFileSync('endpoint/getSupporter.txt', 'utf8');
+                const endpoint = fs.readFileSync('./endpoint/getSupporter.txt', 'utf8');
                 const req = await tools.get(endpoint, this.options);
                 const supporter = req.data.data;
 
@@ -175,7 +175,7 @@ class Trakteer {
                 ]
             };
 
-            const parseJSON = JSON.parse(json);
+            const parseJSON = JSON.stringify(json);
 
             db.set('data', donaturData);
             await tools.post(parseJSON, this.options['webhook']);
@@ -187,7 +187,6 @@ class Trakteer {
         if (boolean === false) {
             cleanInterval(notification);
             console.log('Notifikasi Dinonaktifkan!')
-            process.exit(0);
         }
         console.log('Notifikasi diaktifkan!');
 
