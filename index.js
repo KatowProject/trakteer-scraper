@@ -1,5 +1,5 @@
-const db = require('quick.db');
 const fs = require('fs');
+const path = require('path');
 const cheerio = require('cheerio');
 const tools = require('./tools');
 
@@ -32,7 +32,7 @@ class Trakteer {
         return new Promise(async (resolve, reject) => {
             try {
 
-                const point = fs.readFileSync('./endpoint/getData.txt', 'utf8');
+                const point = fs.readFileSync(path.join(__dirname, '/endpoint/getData.txt'), 'utf8');
                 const res = await tools.get(point, this.options);
                 const donet = res.data.data;
 
@@ -73,6 +73,7 @@ class Trakteer {
     getSupporter() {
         return new Promise(async (resolve, reject) => {
             try {
+
 
                 const endpoint = fs.readFileSync('./endpoint/getSupporter.txt', 'utf8');
                 const req = await tools.get(endpoint, this.options);
@@ -126,67 +127,73 @@ class Trakteer {
         });
     }
 
-
-
-
     getNotification(boolean, time) {
 
         const notify = async () => {
 
             const donaturData = await this.getData();
-            const donatur = db.get('data');
-            if (!donatur) db.set('data', donaturData);
 
-            if (donaturData[0].createdAt == donatur[0].createdAt) return;
+            try {
 
-            const json = {
-                'content': '<a:bell:840021626473152513> tengtong ada donatur masuk! <a:bell:840021626473152513>',
-                'embeds': [
-                    {
-                        "title": "Donasi Trakteer",
-                        "color": 0,
-                        "footer": {
-                            "icon_url": "https://cdn.discordapp.com/emojis/827038555896938498.png",
-                            "text": "1 Koin = Rp 10.000,00.-"
-                        },
-                        "fields": [
-                            {
-                                "name": "Donatur",
-                                "value": donaturData[0].supporter
+                const readDonatur = fs.readFileSync(path.join(__dirname, './latestDonatur.json'), 'utf8');
+                const donatur = JSON.parse(readDonatur.toString());
+
+                if (donaturData[0].createdAt === donatur.createdAt) return;
+
+                const json = {
+                    'content': '<a:bell:840021626473152513> tengtong ada donatur masuk! <a:bell:840021626473152513>',
+                    'embeds': [
+                        {
+                            "title": "Donasi Trakteer",
+                            "color": 0,
+                            "footer": {
+                                "icon_url": "https://cdn.discordapp.com/emojis/827038555896938498.png",
+                                "text": "1 Koin = Rp 10.000,00.-"
                             },
-                            {
-                                "name": "Unit Donasi",
-                                "value": `<:santai:827038555896938498> ${donaturData[0].unit[0]} Koin`
-                            },
-                            {
-                                "name": "Tanggal Donasi",
-                                "value": donaturData[0].createdAt
-                            },
-                            {
-                                "name": "Pesan Dukungan",
-                                "value": donaturData[0].support_message
-                            },
-                            {
-                                "name": "Durasi Role",
-                                "value": `${parseInt(donaturData[0].unit[0]) * 28} hari`
-                            }
-                        ]
-                    }
-                ]
-            };
+                            "fields": [
+                                {
+                                    "name": "Donatur",
+                                    "value": donaturData[0].supporter
+                                },
+                                {
+                                    "name": "Unit Donasi",
+                                    "value": `<:santai:827038555896938498> ${donaturData[0].unit[0]} Koin`
+                                },
+                                {
+                                    "name": "Tanggal Donasi",
+                                    "value": donaturData[0].createdAt
+                                },
+                                {
+                                    "name": "Pesan Dukungan",
+                                    "value": donaturData[0].support_message
+                                },
+                                {
+                                    "name": "Durasi Role",
+                                    "value": `${parseInt(donaturData[0].unit[0]) * 28} hari`
+                                }
+                            ]
+                        }
+                    ]
+                };
 
-            const parseJSON = JSON.stringify(json);
+                const parse = JSON.stringify(json);
 
-            db.set('data', donaturData);
-            await tools.post(parseJSON, this.options['webhook']);
+                fs.writeFileSync(path.join(__dirname, './latestDonatur.json'), JSON.stringify(donaturData[0]));
+                await tools.post(parse, this.options['webhook']);
 
+            } catch (err) {
+
+                fs.writeFileSync(path.join(__dirname, './latestDonatur.json'), JSON.stringify(donaturData[0]));
+                console.log(err);
+
+            }
         }
 
         const notification = setInterval(notify, time);
 
         if (boolean === false) {
-            cleanInterval(notification);
-            console.log('Notifikasi Dinonaktifkan!')
+            clearInterval(notification);
+            console.log('Notifikasi Dinonaktifkan!');
         }
         console.log('Notifikasi diaktifkan!');
 

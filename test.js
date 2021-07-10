@@ -13,6 +13,6 @@ const Trakteer = new client({
     console.log(await Trakteer.getSupporter());
     console.log(await Trakteer.getSaldo());
     console.log(await Trakteer.getTipReceived());
-    console.log(await Trakteer.getNotification(true, 60000));
+    Trakteer.getNotification(true, 60000);
 
 })()
