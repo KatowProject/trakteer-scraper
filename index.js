@@ -17,7 +17,8 @@ class Trakteer {
                 const response = res.data;
 
                 const $ = cheerio.load(response);
-                const saldo = $('.available-balance').find('h2').text();
+                const saldo = $('.available-balance').find('.col-md-3 > h2').text();
+                console.log(saldo);
 
                 return resolve(saldo);
             } catch (e) {
@@ -29,36 +30,15 @@ class Trakteer {
     getData() {
         return new Promise(async (resolve, reject) => {
             try {
-
                 const point = fs.readFileSync(path.join(__dirname, '/endpoint/getData.txt'), 'utf8');
                 const res = await tools.get(point, this.options);
-                const donet = res.data.data;
+                const donet = res.data;
 
-                const list = [];
-                donet.forEach((a, i) => {
-                    const $nominal = cheerio.load(a.nominal);
-                    const $aksi = cheerio.load(a.aksi);
-
-                    const donatur = {
-                        createdAt: a.created_at,
-                        supporter: a.supporter.split('<')[0],
-                        unit: a.quantity,
-                        nominal: $nominal('.d-iflex').text().split('\n')[0],
-                        orderId: $aksi('a').attr('href').split('/').pop()
-                    }
-                    list.push(donatur);
-                })
-
-                return resolve(list);
-
+                return resolve(donet);
             } catch (e) {
-
                 return reject(e);
-
             }
-
         });
-
     }
 
     getOrderDetail(orderId) {

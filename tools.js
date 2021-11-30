@@ -6,7 +6,7 @@ function get(endpoint, options) {
         try {
             const res = await axios.get(baseURL + endpoint, {
                 headers: {
-                    cookie: `XSRF-TOKEN=${options['XSRF-TOKEN']}; trakteer-id-session=${options['trakteer-id-session']}`
+                    cookie: `XSRF-TOKEN=${options['XSRF-TOKEN']}; trakteer-sess=${options['trakteer-id-session']}`
                 }
             })
 
