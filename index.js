@@ -2,9 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
 const tools = require('./tools');
-
 class Trakteer {
-
     constructor(options = {}) {
         this.options = options;
     }
@@ -39,6 +37,32 @@ class Trakteer {
                 return reject(e);
             }
         });
+    }
+
+    getHistory() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const endpoint = fs.readFileSync(path.join(__dirname, '/endpoint/getHistory.txt'), 'utf8');
+                const res = await tools.get(endpoint, this.options);
+                const data = res.data;
+
+                const list = [];
+                for (const history of data.data) {
+                    const amount = cheerio.load(history.jumlah);
+                    const balance = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(history.current_balance);
+                    list.push({
+                        tanggal: history.created_at,
+                        balance,
+                        description: history.description.replace('\n\n', ''),
+                        amount: amount.text().trim(),
+                    });
+                }
+
+                return resolve(list);
+            } catch (e) {
+                return reject(e);
+            }
+        })
     }
 
     getOrderDetail(orderId) {
@@ -97,16 +121,14 @@ class Trakteer {
                 })
 
                 return resolve(list);
-
             } catch (e) {
                 return reject(e);
             }
-        })
+        });
     }
 
     getTipReceived() {
         return new Promise(async (resolve, reject) => {
-
             try {
                 const res = await tools.get('manage/tip-received', this.options);
                 const $ = cheerio.load(res.data);
@@ -115,7 +137,6 @@ class Trakteer {
             } catch (e) {
                 return reject(e);
             }
-
         });
     }
 
@@ -161,7 +182,7 @@ class Trakteer {
 
                     if (donaturData[0].orderId === donatur.orderId) return;
                     fs.writeFileSync(path.join(__dirname, './latestDonatur.json'), JSON.stringify(donaturData[0]));
-                    await tools.post(parse, this.options['webhook']);
+                    await tools.post(json, this.options['webhook']);
 
 
                 } else {
