@@ -2,7 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const cheerio = require('cheerio');
 const tools = require('./tools');
+
 class Trakteer {
+
     constructor(options = {}) {
         this.options = options;
     }
@@ -10,15 +12,15 @@ class Trakteer {
     getSaldo() {
         return new Promise(async (resolve, reject) => {
             try {
-                const endpoint = 'manage/balance';
+                const endpoint = 'manage/dashboard';
                 const res = await tools.get(endpoint, this.options);
                 const response = res.data;
 
                 const $ = cheerio.load(response);
-                const saldo = $('.available-balance').find('.col-md-3 > h2').text();
-                console.log(saldo);
+                const saldo = $('.col-xs-12').eq(0).find('h3').text().trim();
+                const current_donation = $('.col-xs-12').eq(1).find('h3').text().trim();
 
-                return resolve(saldo);
+                return resolve({ saldo, current_donation });
             } catch (e) {
                 return reject(e);
             }
@@ -30,39 +32,13 @@ class Trakteer {
             try {
                 const point = fs.readFileSync(path.join(__dirname, '/endpoint/getData.txt'), 'utf8');
                 const res = await tools.get(point, this.options);
-                const donet = res.data;
+                const donet = res.data.data;
 
                 return resolve(donet);
             } catch (e) {
                 return reject(e);
             }
         });
-    }
-
-    getHistory() {
-        return new Promise(async (resolve, reject) => {
-            try {
-                const endpoint = fs.readFileSync(path.join(__dirname, '/endpoint/getHistory.txt'), 'utf8');
-                const res = await tools.get(endpoint, this.options);
-                const data = res.data;
-
-                const list = [];
-                for (const history of data.data) {
-                    const amount = cheerio.load(history.jumlah);
-                    const balance = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(history.current_balance);
-                    list.push({
-                        tanggal: history.created_at,
-                        balance,
-                        description: history.description.replace('\n\n', ''),
-                        amount: amount.text().trim(),
-                    });
-                }
-
-                return resolve(list);
-            } catch (e) {
-                return reject(e);
-            }
-        })
     }
 
     getOrderDetail(orderId) {
@@ -91,6 +67,32 @@ class Trakteer {
         });
     }
 
+    getHistory() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const endpoint = fs.readFileSync(path.join(__dirname, '/endpoint/getHistory.txt'), 'utf8');
+                const res = await tools.get(endpoint, this.options);
+                const data = res.data;
+
+                const list = [];
+                for (const history of data.data) {
+                    const amount = cheerio.load(history.jumlah);
+                    const balance = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(history.current_balance);
+                    list.push({
+                        tanggal: history.created_at,
+                        balance,
+                        description: history.description.replace('\n\n', ''),
+                        amount: amount.text().trim().split('\n').shift()
+                    });
+                }
+
+                return resolve(list);
+            } catch (e) {
+                return reject(e);
+            }
+        });
+    }
+
     getSupporter() {
         return new Promise(async (resolve, reject) => {
             try {
@@ -106,7 +108,6 @@ class Trakteer {
                     const $ = cheerio.load(a);
 
                     const avatar = $(a.ava).find('img').attr('src') ? $(a.ava).find('img').attr('src') : $(a.ava).attr('src');
-                    const isActive = $(a.is_active)
                     const data = {
                         referenceID: a.reference_id,
                         supporter: a.supporter_name.split('_!!!_'),
@@ -121,14 +122,16 @@ class Trakteer {
                 })
 
                 return resolve(list);
+
             } catch (e) {
                 return reject(e);
             }
-        });
+        })
     }
 
     getTipReceived() {
         return new Promise(async (resolve, reject) => {
+
             try {
                 const res = await tools.get('manage/tip-received', this.options);
                 const $ = cheerio.load(res.data);
@@ -137,6 +140,7 @@ class Trakteer {
             } catch (e) {
                 return reject(e);
             }
+
         });
     }
 
@@ -145,7 +149,7 @@ class Trakteer {
             try {
                 const donaturData = await this.getData();
 
-                const order = await this.getOrderDetail(donaturData[0].orderId);
+                const order = await this.getOrderDetail(donaturData[0].id);
                 const json = {
                     'content': '<a:bell:840021626473152513> tengtong ada donatur masuk! <a:bell:840021626473152513>',
                     'embeds': [
@@ -157,11 +161,7 @@ class Trakteer {
                                 "url": "https://trakteer.id/santai",
                                 "icon_url": "https://cdn.discordapp.com/icons/336336077755252738/c3940657b6d2bf8bf973e1b5e4499728.png?size=4096"
                             },
-                            "description": `
-                                **Nama:** ${order.nama}
-                                **Unit:** <:santai:827038555896938498> ${order.unit.length}
-                                **Nominal:** ${order.nominal}
-                            `,
+                            "description": `**Nama:** ${order.nama}\n**Unit:** <:santai:827038555896938498> ${order.unit.length}\n**Nominal:** ${order.nominal}`,
                             "fields": [
                                 {
                                     name: 'Pesan Dukungan',
@@ -180,7 +180,7 @@ class Trakteer {
                     const readDonatur = fs.readFileSync(path.join(__dirname, './latestDonatur.json'), 'utf8');
                     const donatur = JSON.parse(readDonatur.toString());
 
-                    if (donaturData[0].orderId === donatur.orderId) return;
+                    if (donaturData[0].id === donatur.id) return;
                     fs.writeFileSync(path.join(__dirname, './latestDonatur.json'), JSON.stringify(donaturData[0]));
                     await tools.post(json, this.options['webhook']);
 
@@ -195,7 +195,6 @@ class Trakteer {
         }
 
         const notification = setInterval(notify, time);
-
         if (boolean === false) {
             clearInterval(notification);
             console.log('Notifikasi Dinonaktifkan!');
@@ -204,9 +203,5 @@ class Trakteer {
 
     }
 }
-
-
-
-
 
 module.exports = Trakteer;
