@@ -5,3 +5,15 @@ export interface SaldoResponse {
     withdraw_amount: number;
     supporter_active: number;
 }
+
+export interface OrderDetailResponse {
+    orderId: String
+    tanggal: String;
+    nama: String;
+    unit: {
+        length: String,
+        image: String,
+    },
+    nominal: String;
+    message: String;
+}

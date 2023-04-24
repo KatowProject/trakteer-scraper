@@ -1,6 +1,7 @@
 import Axios from './tools';
 import { load } from 'cheerio';
-import { SaldoResponse } from './types';
+import { OrderDetailResponse, SaldoResponse } from './types';
+
 class Trakteer {
     private ready: Boolean;
     private axios: Axios | undefined;
@@ -51,10 +52,9 @@ class Trakteer {
             try {
                 const res = await this.axios?.get('manage/balance/fetch', {
                     type: 'all',
-                    draw: page,
                     'columns[0][data]': 'created_at',
                     'order[0][dir]': 'desc',
-                    start: 0,
+                    start: page === 1 ? 0 : (page * length) - length,
                     length
                 });
 
@@ -62,7 +62,7 @@ class Trakteer {
                 for (const [index, value] of data.data.entries()) {
                     const $ = load(value.jumlah);
 
-                    const jumlah = $('span').text().trim();
+                    const jumlah = $('span').text().replace(/(\r\n|\n|\r|\?)/gm, "").trim();
                     const description = value.description.replace(/(\r\n|\n|\r)/gm, "").replace(/&#039;/g, "'");
 
                     value.description = description;
@@ -77,13 +77,55 @@ class Trakteer {
         });
     }
 
+    getDonaturData(page: number = 1, length: number = 25): Promise<any> {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const res = await this.axios?.get('manage/tip-received/support-message/fetch', {
+                    'columns[0][data]': 'created_at',
+                    'order[0][column]': 0,
+                    'order[0][dir]': 'desc',
+                    start: page === 1 ? 0 : (page * length) - length,
+                    length
+                });
+
+                const data = res?.data;
+
+                return resolve(data);
+            } catch (err) {
+                return reject(err);
+            }
+        });
+    }
+
     getOrderDetail(orderId: String): Promise<any> {
+        if (!this.ready) throw new Error('Trakteer is not initialized yet, please call init() method first');
         return new Promise(async (resolve, reject) => {
             try {
                 const res = await this.axios?.get(`manage/tip-received/${orderId}`);
-                const { data } = res?.data;
+                const data = res?.data;
+                const $ = load(data);
 
-                return resolve(data);
+                const obj: OrderDetailResponse = {
+                    orderId: '',
+                    tanggal: '',
+                    nama: '',
+                    unit: {
+                        length: '',
+                        image: ''
+                    },
+                    nominal: '',
+                    message: ''
+                };
+
+                obj.orderId = orderId;
+                obj.tanggal = $('tbody').find('tr:contains("Tanggal")').find('td').text().trim();
+                obj.nama = $('tbody').find('tr:contains("Nama")').find('td').text().replace(/\s+|&nbsp;/g, '');
+                obj.unit.length = $('tbody').find('tr:contains("Unit")').find('td').text().trim();
+                obj.unit.image = $('tbody').find('tr:contains("Unit")').find('td').find('img').attr('src')!;
+                obj.nominal = $('tbody').find('tr:contains("Nominal")').find('td').text().trim();
+                obj.message = $('.block').text().trim();
+
+                return resolve(obj);
             } catch (err) {
                 return reject(err);
             }
