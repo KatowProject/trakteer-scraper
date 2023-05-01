@@ -17,7 +17,7 @@ class AxiosRequest {
         });
     }
 
-    get(endpoint: string, params: Object = {}): Promise<AxiosResponse> {
+    get(endpoint: string, params: Object = {}): Promise<AxiosResponse | undefined> {
         return new Promise(async (resolve, reject) => {
             try {
                 const response = await this.request.get(endpoint, { params: params });

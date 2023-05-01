@@ -78,6 +78,7 @@ class Trakteer {
     }
 
     getDonaturData(page: number = 1, length: number = 25): Promise<any> {
+        if (!this.ready) throw new Error('Trakteer is not initialized yet, please call init() method first');
         return new Promise(async (resolve, reject) => {
             try {
                 const res = await this.axios?.get('manage/tip-received/support-message/fetch', {
@@ -91,6 +92,55 @@ class Trakteer {
                 const data = res?.data;
 
                 return resolve(data);
+            } catch (err) {
+                return reject(err);
+            }
+        });
+    }
+
+    getSupporter(page: number = 1, length: number = 25): Promise<any> {
+        if (!this.ready) throw new Error('Trakteer is not initialized yet, please call init() method first');
+        return new Promise(async (resolve, reject) => {
+            try {
+                const res = await this.axios?.get('manage/my-supporters/users/fetch', {
+                    'columns[4][data]': 'last_supported_at',
+                    'order[0][column]': 4,
+                    'order[0][dir]': 'desc',
+                    start: page === 1 ? 0 : (page * length) - length,
+                    length
+                });
+
+                const data = res?.data;
+                const arr = [];
+                for (const [index, value] of data.data.entries()) {
+                    const _ava = load(value.ava);
+                    const ava = _ava('img').attr('src');
+
+                    const arr_alias: Array<any> = [];
+                    const _alias = load(value.alias);
+                    _alias('li').each((i, el) => {
+                        const name = _alias(el).text().trim().replace(/(\r\n|\n|\r)/gm, "");
+                        arr_alias.push(name);
+                    });
+
+                    const _isActive = load(value.is_active);
+                    const lastIsActived = _isActive('small').text().trim().replace(/(\r\n|\n|\r)/gm, "");
+                    _isActive('small').remove();
+                    const isActive = _isActive('div').text().trim().replace(/(\r\n|\n|\r)/gm, "");
+
+                    arr.push({
+                        reference_id: value.reference_id,
+                        supporter_name: value.supporter_name.split('_!!!_'),
+                        sum: value.sum,
+                        last_supported_at: value.last_supported_at,
+                        ava,
+                        alias: arr_alias,
+                        is_active: isActive ? true : false,
+                        last_is_actived: lastIsActived ? lastIsActived : null
+                    });
+                }
+
+                return resolve(arr);
             } catch (err) {
                 return reject(err);
             }
