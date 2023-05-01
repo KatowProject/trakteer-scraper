@@ -97,7 +97,7 @@ class Trakteer {
         });
     }
 
-    getOrderDetail(orderId: String): Promise<any> {
+    getOrderDetail(orderId: String): Promise<OrderDetailResponse> {
         if (!this.ready) throw new Error('Trakteer is not initialized yet, please call init() method first');
         return new Promise(async (resolve, reject) => {
             try {
@@ -105,27 +105,24 @@ class Trakteer {
                 const data = res?.data;
                 const $ = load(data);
 
-                const obj: OrderDetailResponse = {
-                    orderId: '',
-                    tanggal: '',
-                    nama: '',
-                    unit: {
-                        length: '',
-                        image: ''
-                    },
-                    nominal: '',
-                    message: ''
-                };
+                const orderID = orderId;
+                const tanggal = $('tbody').find('tr:contains("Tanggal")').find('td').text().trim();
+                const nama = $('tbody').find('tr:contains("Nama")').find('td').text().replace(/\s+|&nbsp;/g, '');
+                const unit = {
+                    length: $('tbody').find('tr:contains("Unit")').find('td').text().trim(),
+                    image: $('tbody').find('tr:contains("Unit")').find('td').find('img').attr('src')!
+                }
+                const nominal = $('tbody').find('tr:contains("Nominal")').find('td').text().trim();
+                const message = $('.block').text().trim();
 
-                obj.orderId = orderId;
-                obj.tanggal = $('tbody').find('tr:contains("Tanggal")').find('td').text().trim();
-                obj.nama = $('tbody').find('tr:contains("Nama")').find('td').text().replace(/\s+|&nbsp;/g, '');
-                obj.unit.length = $('tbody').find('tr:contains("Unit")').find('td').text().trim();
-                obj.unit.image = $('tbody').find('tr:contains("Unit")').find('td').find('img').attr('src')!;
-                obj.nominal = $('tbody').find('tr:contains("Nominal")').find('td').text().trim();
-                obj.message = $('.block').text().trim();
-
-                return resolve(obj);
+                return resolve({
+                    orderId: orderID,
+                    tanggal,
+                    nama,
+                    unit,
+                    nominal,
+                    message
+                });
             } catch (err) {
                 return reject(err);
             }
