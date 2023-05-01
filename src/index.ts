@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { join as pjoin } from 'path';
 import Axios from './tools';
 import { load } from 'cheerio';
 import { OrderDetailResponse, SaldoResponse } from './types';
@@ -5,14 +7,19 @@ import { OrderDetailResponse, SaldoResponse } from './types';
 class Trakteer {
     private ready: Boolean;
     private axios: Axios | undefined;
+    private notificationInterval: NodeJS.Timer | undefined;
+    private notificationEnabled: Boolean = false;
+    private notificationWebhookUrl: String | any = undefined;
     protected XSRF_TOKEN: String | undefined;
     protected TRAKTEER_SESSION: String | undefined;
+    protected TIME_NOTIFICATION: Number | undefined;
+    protected WEBHOOK_URL: String | undefined;
 
     constructor() {
         this.ready = false;
     }
 
-    getSaldo(): Promise<SaldoResponse> {
+    getSaldo(): Promise<SaldoResponse | undefined> {
         if (!this.ready) throw new Error('Trakteer is not initialized yet, please call init() method first');
         return new Promise(async (resolve, reject) => {
             try {
@@ -177,6 +184,98 @@ class Trakteer {
                 return reject(err);
             }
         });
+    }
+
+    getLeaderboard(): Promise<any> {
+        return new Promise(async (resolve, reject) => {
+            try {
+                const res = await this.axios?.get('manage/my-supporters');
+                const data = res?.data;
+                const $ = load(data);
+
+                const arr: Array<any> = [];
+                const main = $('#my-top-supporters').find('.row');
+                main.find('.mb-20').each((i, el) => {
+                    const title = $(el).find('.title').text().trim();
+
+                    const arr_supporter: Array<any> = [];
+                    $(el).find('.supporter').each((j, ele) => {
+                        $('.prevname').remove();
+                        const name = $(ele).find('.name').find('span').text().trim().replace(/\s+|&nbsp;/g, '');
+                        const unit = $(ele).find('.unit').text().trim();
+
+                        arr_supporter.push({
+                            name,
+                            unit
+                        });
+                    });
+
+                    arr.push({
+                        title,
+                        supporter: arr_supporter
+                    });
+                });
+
+                return resolve(arr);
+            } catch (err) {
+                return reject(err);
+            }
+        });
+    }
+
+    webhookNotification(enable: boolean, webhookUrl: string, timeout: number): void {
+        if (!this.ready) throw new Error('Trakteer is not initialized yet, please call init() method first');
+        if (!enable) {
+            this.notificationEnabled = false;
+            this.notificationWebhookUrl = null;
+            if (this.notificationInterval) clearInterval(this.notificationInterval);
+
+            console.log('Trakteer webhook notification disabled');
+            return;
+        }
+
+        if (!timeout) throw new Error('Timeout is required');
+        if (!webhookUrl) throw new Error('Webhook URL is required');
+        if (this.notificationInterval) clearInterval(this.notificationInterval);
+
+        this.notificationInterval = setInterval(this.fetchNotification.bind(this), timeout);
+        this.notificationEnabled = true;
+        this.notificationWebhookUrl = webhookUrl;
+
+    }
+
+    private async fetchNotification(): Promise<void> {
+        if (!this.ready) throw new Error('Trakteer is not initialized yet, please call init() method first');
+        if (!this.notificationEnabled) return;
+
+        const path = './data/last-donatur.json';
+        const fileisExits = existsSync(pjoin(__dirname, path));
+        if (!fileisExits) {
+            mkdirSync(pjoin(__dirname, './data'), { recursive: true });
+            writeFileSync(pjoin(__dirname, path), JSON.stringify({ id: null }));
+        }
+        const lastDonatur = readFileSync(pjoin(__dirname, path), 'utf-8');
+        const lastDonaturJson = JSON.parse(lastDonatur);
+
+        const donaturs = await this.getDonaturData(1, 2);
+        const donatur = donaturs.data ? donaturs.data[0] : null;
+        if (!donatur) return;
+
+        if (lastDonaturJson.id === donatur.id) return;
+        lastDonaturJson.id = donatur.id;
+
+        try {
+            const res = await this.axios?.self.post(this.notificationWebhookUrl, { content: JSON.stringify(donatur) }, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+
+            writeFileSync(pjoin(__dirname, path), JSON.stringify(lastDonaturJson));
+            console.log('Trakteer webhook notification sent');
+        } catch (err: any) {
+            console.log(`Trakteer webhook notification failed: ${err.message}`);
+        }
     }
 
     init(xsrfToken: String, trakteerSession: String): void {

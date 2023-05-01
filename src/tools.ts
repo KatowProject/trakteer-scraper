@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosResponse } from "axios";
 
 class AxiosRequest {
     public request: AxiosInstance;
+    public self = axios;
     private BASE_URL: string = "https://trakteer.id/";
 
     constructor(auth: { XSRF_TOKEN: String, TRAKTEER_SESSION: String }) {
